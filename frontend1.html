@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cybercrime Complaint Predictor</title>
+<style>
+  :root{
+    --bg: #0d1520;
+    --panel: #131e2c;
+    --panel-border: #2a3a4d;
+    --text: #eef2f6;
+    --text-dim: #9fb0c0;
+    --text-faint: #6d7f92;
+    --accent: #d9a441;
+    --accent-dark: #17212f;
+    --danger: #e06a5f;
+    --ok: #5fbf8f;
+    --warn: #e0b25f;
+    --serif: Georgia, 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body{
+    margin:0; min-height:100vh; background: var(--bg); color: var(--text);
+    font-family: var(--sans); line-height:1.5; padding: 28px 20px 60px;
+  }
+  .wrap{ max-width: 640px; margin: 0 auto; }
+  .wrap.narrow{ max-width: 420px; }
+  .centered{ min-height: calc(100vh - 88px); display:flex; flex-direction:column; justify-content:center; }
+  .eyebrow{ color: var(--accent); font-size: 14px; margin: 0 0 10px; }
+  .eyebrow.center{ text-align:center; }
+  h1{ font-family: var(--serif); font-weight:400; font-size:40px; line-height:1.15; margin:0 0 18px; }
+  h1.small{ font-size:32px; text-align:center; }
+  .intro{ color: var(--text-dim); font-size:16px; max-width:56ch; margin:0 0 28px; }
+  .intro.center{ text-align:center; max-width:40ch; margin:0 auto 28px; font-size:15px; }
+  hr.rule{ border:none; border-top:1px solid var(--panel-border); margin:0 0 24px; }
+  .panel{ background: var(--panel); border:1px solid var(--panel-border); border-radius:10px; padding:26px; margin-bottom:22px; }
+  .panel h2{ font-family: var(--serif); font-weight:400; font-size:24px; margin:0 0 6px; }
+  .panel .sub{ color: var(--text-faint); font-size:13.5px; margin: 0 0 22px; }
+  label{ display:block; color: var(--text-dim); font-size:14px; margin-bottom:8px; }
+  .field{ margin-bottom:18px; }
+  .row{ display:flex; gap:14px; }
+  .row .field{ flex:1; }
+  select, input[type=text], input[type=number], input[type=password], input[type=tel], input[type=email], input[type=date], textarea{
+    width:100%; background: var(--accent-dark); border:1px solid var(--panel-border); border-radius:6px;
+    color: var(--text); font-size:15px; font-family: var(--sans); padding:12px 14px;
+  }
+  textarea{ min-height:88px; resize:vertical; }
+  select{ appearance:none; -webkit-appearance:none; }
+  ::placeholder{ color: var(--text-faint); }
+  select:focus, input:focus, textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .phone-row{ display:flex; gap:10px; }
+  .phone-row select{ flex:0 0 92px; }
+  .phone-row input{ flex:1; }
+  .checkgrid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .checkitem{ display:flex; align-items:center; gap:8px; color: var(--text-dim); font-size:14px; }
+  .checkitem input{ accent-color: var(--accent); width:auto; }
+  button.primary{
+    width:100%; background: var(--accent); color:#23180a; border:none; border-radius:6px;
+    font-size:17px; font-weight:600; padding:15px; cursor:pointer;
+  }
+  button.primary:active{ transform: translateY(1px); }
+  button.primary:disabled{ opacity:0.75; cursor:wait; }
+  button.secondary{
+    background: transparent; color: var(--text-dim); border:1px solid var(--panel-border); border-radius:6px;
+    font-size:15px; font-weight:600; padding:15px 18px; cursor:pointer; white-space:nowrap;
+  }
+  button.secondary:hover{ border-color: var(--text-faint); color: var(--text); }
+  .btn-row{ display:flex; gap:12px; }
+  .btn-row .primary{ flex:1; }
+  .row-between{ display:flex; align-items:center; justify-content:space-between; margin:-6px 0 22px; font-size:13.5px; }
+  .remember{ display:flex; align-items:center; gap:8px; color: var(--text-dim); }
+  .remember input{ accent-color: var(--accent); }
+  .forgot{ color: var(--accent); text-decoration:none; }
+  .forgot:hover{ text-decoration:underline; }
+  .error{ background: rgba(224,106,95,0.12); border:1px solid rgba(224,106,95,0.4); color: var(--danger);
+    border-radius:6px; padding:10px 14px; font-size:13.5px; margin-bottom:18px; display:none; }
+  .notice{ background: rgba(95,191,143,0.12); border:1px solid rgba(95,191,143,0.4); color: var(--ok);
+    border-radius:6px; padding:10px 14px; font-size:13.5px; margin-bottom:18px; display:none; }
+  .sent-to{ color: var(--text-dim); font-size:14px; margin-bottom:18px; }
+  .sent-to strong{ color: var(--text); font-weight:600; }
+  .resend{ text-align:center; font-size:13.5px; color: var(--text-faint); margin-top:18px; }
+  .resend a{ color: var(--accent); text-decoration:none; }
+  .resend a.disabled{ color: var(--text-faint); pointer-events:none; }
+  .back{ display:inline-block; margin-top:16px; color: var(--text-faint); font-size:13.5px; text-decoration:none; }
+  .divider{ display:flex; align-items:center; gap:12px; margin:22px 0; color: var(--text-faint); font-size:13px; }
+  .divider::before, .divider::after{ content:""; flex:1; height:1px; background: var(--panel-border); }
+  .signup{ text-align:center; color: var(--text-dim); font-size:14px; }
+  .signup a{ color: var(--accent); text-decoration:none; }
+  .result-empty{ color: var(--text-dim); font-size:15px; }
+  .result-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+  .stat{ background: var(--accent-dark); border:1px solid var(--panel-border); border-radius:8px; padding:14px; }
+  .stat .k{ color: var(--text-faint); font-size:12.5px; margin-bottom:6px; }
+  .stat .v{ font-size:18px; font-weight:600; }
+  .v.sev-high{ color: var(--danger); } .v.sev-medium{ color: var(--warn); } .v.sev-low{ color: var(--ok); }
+  .advice{ border-top:1px solid var(--panel-border); padding-top:16px; font-size:14.5px; color: var(--text-dim); }
+  .advice ul{ margin:8px 0 0; padding-left:20px; }
+  .advice li{ margin-bottom:6px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .topbar .user{ color: var(--text-dim); font-size:14px; }
+  .topbar .user strong{ color: var(--text); }
+  .logout{ color: var(--text-faint); font-size:13.5px; text-decoration:none; border:1px solid var(--panel-border);
+    border-radius:6px; padding:7px 12px; }
+  .disclaimer{ color: var(--text-faint); font-size:12.5px; margin-top:30px; }
+  .disclaimer.center{ text-align:center; }
+  .screen{ display:none; } .screen.active{ display:block; }
+  .step{ display:none; } .step.active{ display:block; }
+  .field.invalid input, .field.invalid select, .field.invalid textarea{
+    outline:1.5px solid var(--danger); outline-offset:1px; }
+  .field-msg{ color: var(--danger); font-size:12.5px; margin-top:6px; display:none; }
+  .field.invalid .field-msg{ display:block; }
+  .spinner{ width:17px; height:17px; border:2px solid rgba(35,24,10,0.35); border-top-color:#23180a;
+    border-radius:50%; display:inline-block; vertical-align:-3px; margin-right:8px; animation: spin 0.7s linear infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  .badge{ display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:600; }
+  .badge.sev-high{ background: rgba(224,106,95,0.15); color: var(--danger); }
+  .badge.sev-medium{ background: rgba(224,178,95,0.15); color: var(--warn); }
+  .badge.sev-low{ background: rgba(95,191,143,0.15); color: var(--ok); }
+
+  /* Stepper */
+  .stepper{ display:flex; align-items:center; gap:4px; margin-bottom:26px; flex-wrap:wrap; }
+  .stepper .dot{
+    width:9px; height:9px; border-radius:50%; background: var(--panel-border); flex-shrink:0;
+  }
+  .stepper .dot.done{ background: var(--ok); }
+  .stepper .dot.current{ background: var(--accent); }
+  .stepper .line{ flex:1; height:1px; background: var(--panel-border); min-width:8px; }
+  .stepper .line.done{ background: var(--ok); }
+  .step-label{ color: var(--text-faint); font-size:12.5px; margin: -14px 0 20px; }
+  .step-label strong{ color: var(--accent); font-weight:600; }
+
+  /* Report / dashboard */
+  .report-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom: 10px; }
+  .report-section{ margin-bottom:20px; }
+  .report-section h3{ font-family: var(--serif); font-weight:400; font-size:18px; color: var(--accent); margin:0 0 12px; }
+  .kv{ display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px dashed var(--panel-border); font-size:14px; }
+  .kv .k{ color: var(--text-faint); }
+  .kv .v{ color: var(--text); text-align:right; }
+  .kv:last-child{ border-bottom:none; }
+  .print-btn{ margin-top: 4px; }
+  @media print{
+    .topbar, .btn-row, .print-btn, .stepper, .step-label{ display:none !important; }
+    body{ background:#fff; color:#000; }
+    .panel{ border-color:#ccc; background:#fff; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SCREEN: PHONE VERIFICATION ============ -->
+<div class="screen active" id="screenVerify">
+  <div class="wrap narrow centered">
+    <p class="eyebrow center">Complaint intake &amp; triage — demo</p>
+    <h1 class="small">Verify your number</h1>
+    <p class="intro center">We'll text you a one-time code to confirm it's really you before you sign in.</p>
+    <div class="panel">
+      <div class="step active" id="stepPhone">
+        <div class="error" id="phoneError">Please enter a valid 10-digit mobile number.</div>
+        <div class="field">
+          <label for="phone">Mobile number</label>
+          <div class="phone-row">
+            <select id="countryCode">
+              <option value="+91">+91</option><option value="+1">+1</option>
+              <option value="+44">+44</option><option value="+971">+971</option>
+            </select>
+            <input type="tel" id="phone" placeholder="98765 43210" maxlength="10" inputmode="numeric">
+          </div>
+        </div>
+        <button class="primary" id="sendOtpBtn">Send code</button>
+      </div>
+      <div class="step" id="stepOtp">
+        <div class="notice" id="otpNotice">Code sent successfully.</div>
+        <div class="error" id="otpError">That code didn't match. Please try again.</div>
+        <p class="sent-to">Enter the 6-digit code sent to <strong id="sentToNumber"></strong></p>
+        <div class="field">
+          <label for="otp">Verification code</label>
+          <input type="text" id="otp" placeholder="••••••" maxlength="6" inputmode="numeric">
+        </div>
+        <button class="primary" id="verifyBtn">Verify &amp; continue</button>
+        <p class="resend">Didn't get it? <a href="#" id="resendLink">Resend code</a> <span id="resendTimer"></span></p>
+        <a href="#" class="back" id="backLink">← Change number</a>
+      </div>
+    </div>
+    <p class="disclaimer center">This is a demo verification screen — no SMS is actually sent.</p>
+  </div>
+</div>
+
+<!-- ============ SCREEN: LOGIN ============ -->
+<div class="screen" id="screenLogin">
+  <div class="wrap narrow centered">
+    <p class="eyebrow center">Complaint intake &amp; triage — demo</p>
+    <h1 class="small">Sign in</h1>
+    <p class="intro center">Access the Cybercrime Complaint Predictor to log and triage new complaints.</p>
+    <div class="panel">
+      <div class="error" id="loginError">Please enter both a username and a password.</div>
+      <form id="loginForm">
+        <div class="field">
+          <label for="username">Username or email</label>
+          <input type="text" id="username" placeholder="e.g. investigator01" autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <div class="row-between">
+          <label class="remember"><input type="checkbox" id="remember"> Remember me</label>
+          <a href="#" class="forgot">Forgot password?</a>
+        </div>
+        <button type="submit" class="primary">Sign in</button>
+      </form>
+      <div class="divider">or</div>
+      <p class="signup">Don't have an account? <a href="#">Request access</a></p>
+    </div>
+    <p class="disclaimer center">This is a demo sign-in screen and does not authenticate against a real system.</p>
+  </div>
+</div>
+
+<!-- ============ WIZARD SCREEN ============ -->
+<div class="screen" id="screenWizard">
+  <div class="wrap">
+    <div class="topbar">
+      <p class="user">Signed in as <strong id="loggedUser">—</strong></p>
+      <a href="#" class="logout" id="logoutLink">Log out</a>
+    </div>
+    <p class="eyebrow">Complaint intake &amp; triage — demo</p>
+    <h1 style="font-size:32px;">Cybercrime Complaint Predictor</h1>
+
+    <div class="stepper" id="stepperBar"></div>
+    <p class="step-label">Step <strong id="stepNum">1</strong> of <span id="stepTotal">8</span> — <span id="stepName"></span></p>
+
+    <!-- Step: Officer / Team Details -->
+    <div class="wstep active" data-step="0">
+      <div class="panel">
+        <h2>Officer / Team Details</h2>
+        <p class="sub">Who is logging this complaint.</p>
+        <div class="row">
+          <div class="field"><label for="offName">Officer name</label><input type="text" id="offName" placeholder="e.g. Insp. R. Kumar"></div>
+          <div class="field"><label for="offId">Badge / ID number</label><input type="text" id="offId" placeholder="e.g. TN-4021"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="offRank">Rank</label><input type="text" id="offRank" placeholder="e.g. Sub-Inspector"></div>
+          <div class="field"><label for="offUnit">Unit / Department</label><input type="text" id="offUnit" placeholder="e.g. Cyber Crime Cell"></div>
+        </div>
+        <div class="field"><label for="offStation">Station / Jurisdiction</label><input type="text" id="offStation" placeholder="e.g. Chennai City Cyber Cell"></div>
+      </div>
+    </div>
+
+    <!-- Step: Cybercrime Complaint Details -->
+    <div class="wstep" data-step="1">
+      <div class="panel">
+        <h2>Cybercrime Complaint Details</h2>
+        <p class="sub">What was reported.</p>
+        <div class="row">
+          <div class="field"><label for="cType">Complaint type</label>
+            <select id="cType">
+              <option>UPI / Payment fraud</option><option>Phishing / Fake link</option>
+              <option>OTP / Vishing call</option><option>Social media hacking</option>
+              <option>Online job / Investment scam</option><option>SIM swap / KYC fraud</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label for="cDate">Date of incident</label><input type="date" id="cDate"></div>
+        </div>
+        <div class="field"><label for="cDesc">Description</label>
+          <textarea id="cDesc" placeholder="Briefly describe what happened..."></textarea>
+          <p class="field-msg">Please add a few more details (at least 10 characters).</p>
+        </div>
+        <div class="field"><label for="cPlatform">Platform / app involved</label><input type="text" id="cPlatform" placeholder="e.g. WhatsApp, Instagram, PhonePe"></div>
+      </div>
+    </div>
+
+    <!-- Step: Victim Details -->
+    <div class="wstep" data-step="2">
+      <div class="panel">
+        <h2>Victim Details</h2>
+        <p class="sub">Who the complaint is filed on behalf of.</p>
+        <div class="row">
+          <div class="field"><label for="vName">Full name</label><input type="text" id="vName" placeholder="Victim's name"></div>
+          <div class="field"><label for="vAge">Age</label><input type="number" id="vAge" min="0" placeholder="e.g. 34"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="vPhone">Contact number</label><input type="tel" id="vPhone" placeholder="10-digit mobile"></div>
+          <div class="field"><label for="vEmail">Email</label><input type="email" id="vEmail" placeholder="name@example.com"></div>
+        </div>
+        <div class="field"><label for="vAddress">Address</label><textarea id="vAddress" placeholder="Full residential address"></textarea></div>
+        <div class="field"><label for="vState">State / UT</label>
+          <select id="vState">
+            <option value="">Select state / UT</option>
+            <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+            <option>Bihar</option><option>Chhattisgarh</option><option>Delhi</option><option>Goa</option>
+            <option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option>
+            <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+            <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
+            <option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option><option>Odisha</option>
+            <option>Punjab</option><option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option>
+            <option>Telangana</option><option>Tripura</option><option>Uttar Pradesh</option>
+            <option>Uttarakhand</option><option>West Bengal</option>
+          </select>
+          <p class="field-msg">Please select a state or UT.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step: Financial Transaction Details -->
+    <div class="wstep" data-step="3">
+      <div class="panel">
+        <h2>Financial Transaction Details</h2>
+        <p class="sub">Leave amount as 0 if no money was lost.</p>
+        <div class="row">
+          <div class="field"><label for="fAmount">Amount involved (₹)</label>
+            <input type="number" id="fAmount" value="0" min="0" step="1">
+            <p class="field-msg">Amount can't be negative.</p>
+          </div>
+          <div class="field"><label for="fContact">Contact mode used by scammer</label>
+            <select id="fContact">
+              <option>Phone call</option><option>SMS</option><option>WhatsApp</option>
+              <option>Email</option><option>App / Website</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="fTxnId">Transaction ID / UTR</label><input type="text" id="fTxnId" placeholder="e.g. 405611223344"></div>
+          <div class="field"><label for="fBank">Bank / wallet name</label><input type="text" id="fBank" placeholder="e.g. SBI, Paytm"></div>
+        </div>
+        <div class="field"><label for="fBeneficiary">Beneficiary account / UPI ID</label><input type="text" id="fBeneficiary" placeholder="e.g. scammer@upi"></div>
+      </div>
+    </div>
+
+    <!-- Step: Investigation Details -->
+    <div class="wstep" data-step="4">
+      <div class="panel">
+        <h2>Investigation Details</h2>
+        <p class="sub">Current status of the case.</p>
+        <div class="row">
+          <div class="field"><label for="iStatus">Investigation status</label>
+            <select id="iStatus">
+              <option>New / Not started</option><option>Under investigation</option>
+              <option>Evidence collection</option><option>Suspect identified</option>
+              <option>Closed</option>
+            </select>
+          </div>
+          <div class="field"><label for="iPriority">Case priority</label>
+            <select id="iPriority"><option>Low</option><option>Medium</option><option>High</option></select>
+          </div>
+        </div>
+        <label>Evidence collected</label>
+        <div class="checkgrid field">
+          <label class="checkitem"><input type="checkbox" id="evScreenshot"> Screenshots</label>
+          <label class="checkitem"><input type="checkbox" id="evCallLog"> Call logs</label>
+          <label class="checkitem"><input type="checkbox" id="evBankStmt"> Bank statement</label>
+          <label class="checkitem"><input type="checkbox" id="evDevice"> Device seized</label>
+        </div>
+        <div class="field"><label for="iRemarks">Remarks</label><textarea id="iRemarks" placeholder="Any additional investigation notes"></textarea></div>
+      </div>
+    </div>
+
+    <!-- Step: Predictive Analytics -->
+    <div class="wstep" data-step="5">
+      <div class="panel">
+        <h2>Predictive Analytics</h2>
+        <p class="sub">Runs the triage model against the details you've entered so far.</p>
+        <p class="result-empty" id="preAnalyticsNote">Press "Run prediction" to estimate category, severity, and resolution time based on the complaint, victim, and financial details entered.</p>
+      </div>
+    </div>
+
+    <!-- Step: Prediction Result -->
+    <div class="wstep" data-step="6">
+      <div class="panel">
+        <h2>Prediction Result</h2>
+        <div id="resultBox" aria-live="polite">
+          <p class="result-empty">Run the prediction on the previous step first.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step: Dashboard / Report -->
+    <div class="wstep" data-step="7">
+      <div class="panel">
+        <h2>Dashboard / Report</h2>
+        <p class="sub">Summary of everything logged for this complaint.</p>
+        <div id="reportBox"></div>
+        <button class="secondary print-btn" id="printBtn" type="button">Print / Save as PDF</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="secondary" id="prevBtn" type="button">Back</button>
+      <button class="primary" id="nextBtn" type="button"><span id="nextBtnLabel">Next</span></button>
+    </div>
+
+    <p class="disclaimer">This is a rule-based demo for illustration only — it does not connect to any real complaint database or law-enforcement system.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- Screen switching ----------
+  var screens = {
+    verify: document.getElementById('screenVerify'),
+    login: document.getElementById('screenLogin'),
+    wizard: document.getElementById('screenWizard')
+  };
+  function showScreen(name){
+    Object.keys(screens).forEach(function(k){ screens[k].classList.toggle('active', k === name); });
+    window.scrollTo(0,0);
+  }
+
+  // ---------- Phone verify ----------
+  var stepPhone = document.getElementById('stepPhone');
+  var stepOtp = document.getElementById('stepOtp');
+  var phoneInput = document.getElementById('phone');
+  var countryCode = document.getElementById('countryCode');
+  var phoneError = document.getElementById('phoneError');
+  var sendOtpBtn = document.getElementById('sendOtpBtn');
+  var otpInput = document.getElementById('otp');
+  var otpError = document.getElementById('otpError');
+  var otpNotice = document.getElementById('otpNotice');
+  var verifyBtn = document.getElementById('verifyBtn');
+  var sentToNumber = document.getElementById('sentToNumber');
+  var resendLink = document.getElementById('resendLink');
+  var resendTimer = document.getElementById('resendTimer');
+  var backLink = document.getElementById('backLink');
+  var demoOtp = ''; var timerInterval = null;
+
+  function generateOtp(){ return String(Math.floor(100000 + Math.random() * 900000)); }
+  function startResendTimer(){
+    var seconds = 30;
+    resendLink.classList.add('disabled');
+    resendTimer.textContent = '(' + seconds + 's)';
+    clearInterval(timerInterval);
+    timerInterval = setInterval(function(){
+      seconds -= 1;
+      if (seconds <= 0) {
+        clearInterval(timerInterval); resendLink.classList.remove('disabled'); resendTimer.textContent = '';
+      } else { resendTimer.textContent = '(' + seconds + 's)'; }
+    }, 1000);
+  }
+  function sendCode(){
+    var phone = phoneInput.value.trim();
+    if (!/^\d{10}$/.test(phone)) { phoneError.style.display = 'block'; return; }
+    phoneError.style.display = 'none';
+    demoOtp = generateOtp();
+    sentToNumber.textContent = countryCode.value + ' ' + phone;
+    stepPhone.classList.remove('active'); stepOtp.classList.add('active');
+    otpNotice.style.display = 'block'; otpError.style.display = 'none'; otpInput.value = '';
+    startResendTimer();
+    console.log('Demo OTP for', countryCode.value + phone, 'is', demoOtp);
+  }
+  sendOtpBtn.addEventListener('click', sendCode);
+  resendLink.addEventListener('click', function(e){ e.preventDefault(); if (!resendLink.classList.contains('disabled')) sendCode(); });
+  backLink.addEventListener('click', function(e){ e.preventDefault(); clearInterval(timerInterval); stepOtp.classList.remove('active'); stepPhone.classList.add('active'); });
+  verifyBtn.addEventListener('click', function(){
+    var entered = otpInput.value.trim();
+    if (entered !== demoOtp) { otpNotice.style.display = 'none'; otpError.style.display = 'block'; return; }
+    showScreen('login');
+  });
+
+  // ---------- Login ----------
+  var loginForm = document.getElementById('loginForm');
+  var loginError = document.getElementById('loginError');
+  var loggedUser = document.getElementById('loggedUser');
+  loginForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var username = document.getElementById('username').value.trim();
+    var password = document.getElementById('password').value.trim();
+    if (!username || !password) { loginError.style.display = 'block'; return; }
+    loginError.style.display = 'none';
+    loggedUser.textContent = username;
+    showScreen('wizard');
+    goToStep(0);
+  });
+  document.getElementById('logoutLink').addEventListener('click', function(e){
+    e.preventDefault();
+    document.getElementById('username').value = ''; document.getElementById('password').value = '';
+    showScreen('login');
+  });
+
+  // ---------- Wizard ----------
+  var stepNames = [
+    'Officer / Team Details',
+    'Cybercrime Complaint Details',
+    'Victim Details',
+    'Financial Transaction Details',
+    'Investigation Details',
+    'Predictive Analytics',
+    'Prediction Result',
+    'Dashboard / Report'
+  ];
+  var wsteps = Array.prototype.slice.call(document.querySelectorAll('.wstep'));
+  var current = 0;
+  var predictionRun = false;
+  var lastResult = null;
+
+  var stepperBar = document.getElementById('stepperBar');
+  function buildStepper(){
+    stepperBar.innerHTML = '';
+    stepNames.forEach(function(name, i){
+      var dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.id = 'dot' + i;
+      stepperBar.appendChild(dot);
+      if (i < stepNames.length - 1){
+        var line = document.createElement('div');
+        line.className = 'line';
+        line.id = 'line' + i;
+        stepperBar.appendChild(line);
+      }
+    });
+  }
+  buildStepper();
+
+  function updateStepper(){
+    stepNames.forEach(function(_, i){
+      var dot = document.getElementById('dot' + i);
+      dot.className = 'dot' + (i < current ? ' done' : i === current ? ' current' : '');
+      var line = document.getElementById('line' + i);
+      if (line) line.className = 'line' + (i < current ? ' done' : '');
+    });
+  }
+
+  function goToStep(i){
+    current = i;
+    wsteps.forEach(function(s){ s.classList.toggle('active', parseInt(s.dataset.step,10) === i); });
+    document.getElementById('stepNum').textContent = i + 1;
+    document.getElementById('stepTotal').textContent = stepNames.length;
+    document.getElementById('stepName').textContent = stepNames[i];
+    document.getElementById('prevBtn').style.visibility = i === 0 ? 'hidden' : 'visible';
+    var nextLabel = document.getElementById('nextBtnLabel');
+    var nextBtn = document.getElementById('nextBtn');
+    if (i === 5) { nextLabel.textContent = 'Run prediction'; nextBtn.disabled = false; }
+    else if (i === stepNames.length - 1) { nextLabel.textContent = 'Done'; }
+    else { nextLabel.textContent = 'Next'; nextBtn.disabled = false; }
+    updateStepper();
+    window.scrollTo(0,0);
+  }
+
+  function setInvalid(fieldId, isInvalid){
+    var el = document.getElementById(fieldId);
+    if (el) el.classList.toggle('invalid', isInvalid);
+  }
+
+  function validateStep(i){
+    if (i === 1){
+      var desc = document.getElementById('cDesc').value.trim();
+      var ok = desc.length >= 10;
+      setInvalid('cDesc', false); // cDesc is input itself, wrap check below
+      var field = document.getElementById('cDesc').closest('.field');
+      field.classList.toggle('invalid', !ok);
+      return ok;
+    }
+    if (i === 2){
+      var stateField = document.getElementById('vState').closest('.field');
+      var ok2 = document.getElementById('vState').value !== '';
+      stateField.classList.toggle('invalid', !ok2);
+      return ok2;
+    }
+    if (i === 3){
+      var amtField = document.getElementById('fAmount').closest('.field');
+      var amt = parseFloat(document.getElementById('fAmount').value);
+      var ok3 = !isNaN(amt) && amt >= 0;
+      amtField.classList.toggle('invalid', !ok3);
+      return ok3;
+    }
+    return true;
+  }
+
+  var typeProfile = {
+    'UPI / Payment fraud':            { sev: 3, days: 12, cat: 'Financial Fraud' },
+    'Phishing / Fake link':           { sev: 2, days: 8,  cat: 'Phishing' },
+    'OTP / Vishing call':             { sev: 3, days: 10, cat: 'Social Engineering' },
+    'Social media hacking':           { sev: 2, days: 6,  cat: 'Account Compromise' },
+    'Online job / Investment scam':   { sev: 3, days: 18, cat: 'Financial Fraud' },
+    'SIM swap / KYC fraud':           { sev: 4, days: 15, cat: 'Identity Theft' },
+    'Other':                          { sev: 1, days: 7,  cat: 'General Cybercrime' }
+  };
+  function fmtCurrency(n){ return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+
+  function runPrediction(cb){
+    var type = document.getElementById('cType').value;
+    var desc = document.getElementById('cDesc').value.trim();
+    var amount = parseFloat(document.getElementById('fAmount').value) || 0;
+    var contact = document.getElementById('fContact').value;
+    var state = document.getElementById('vState').value;
+
+    var profile = typeProfile[type] || typeProfile['Other'];
+    var score = profile.sev;
+    if (amount > 100000) score += 2; else if (amount > 20000) score += 1;
+    if (contact === 'Phone call' || contact === 'WhatsApp') score += 1;
+    var lower = desc.toLowerCase();
+    if (/otp|password|pin|cvv/.test(lower)) score += 1;
+    if (/threat|blackmail|extort/.test(lower)) score += 2;
+
+    var severity = 'Low', sevClass = 'sev-low';
+    if (score >= 6) { severity = 'High'; sevClass = 'sev-high'; }
+    else if (score >= 3) { severity = 'Medium'; sevClass = 'sev-medium'; }
+
+    var days = profile.days + Math.round(score * 0.8);
+    if (state) days += 2;
+
+    var advice = [];
+    if (/otp|password|pin|cvv/.test(lower)) advice.push('Do not share any further OTPs, PINs, or passwords with anyone.');
+    if (amount > 0) advice.push('Contact the victim\u2019s bank fraud helpline to request a transaction freeze.');
+    advice.push('File / update the report at cybercrime.gov.in or via the 1930 helpline.');
+    if (contact === 'Phone call' || contact === 'WhatsApp') advice.push('Preserve call logs / chat screenshots as evidence.');
+
+    lastResult = { category: profile.cat, severity: severity, sevClass: sevClass, days: days, amount: amount, advice: advice };
+
+    setTimeout(function(){ cb(lastResult); }, 900);
+  }
+
+  function renderResult(r){
+    document.getElementById('resultBox').innerHTML =
+      '<div class="result-grid">' +
+        '<div class="stat"><div class="k">Predicted category</div><div class="v">' + r.category + '</div></div>' +
+        '<div class="stat"><div class="k">Severity</div><div class="v ' + r.sevClass + '">' + r.severity + '</div></div>' +
+        '<div class="stat"><div class="k">Est. resolution time</div><div class="v">' + r.days + ' days</div></div>' +
+        '<div class="stat"><div class="k">Amount involved</div><div class="v">' + fmtCurrency(r.amount) + '</div></div>' +
+      '</div>' +
+      '<div class="advice"><strong>Suggested next steps</strong><ul>' +
+        r.advice.map(function(a){ return '<li>' + a + '</li>'; }).join('') +
+      '</ul></div>';
+  }
+
+  function val(id){ var el = document.getElementById(id); return el ? (el.value || '—') : '—'; }
+  function checked(id){ return document.getElementById(id).checked ? 'Yes' : 'No'; }
+
+  function kv(k, v){ return '<div class="kv"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'; }
+
+  function renderReport(){
+    var r = lastResult || { category:'—', severity:'—', sevClass:'', days:'—', amount:0 };
+    var html = '';
+    html += '<div class="report-section"><h3>Officer / Team</h3>' +
+      kv('Officer', val('offName')) + kv('Badge / ID', val('offId')) +
+      kv('Rank', val('offRank')) + kv('Unit', val('offUnit')) + kv('Station', val('offStation')) +
+    '</div>';
+    html += '<div class="report-section"><h3>Complaint</h3>' +
+      kv('Type', val('cType')) + kv('Date', val('cDate')) + kv('Platform', val('cPlatform')) +
+      kv('Description', val('cDesc')) +
+    '</div>';
+    html += '<div class="report-section"><h3>Victim</h3>' +
+      kv('Name', val('vName')) + kv('Age', val('vAge')) + kv('Phone', val('vPhone')) +
+      kv('Email', val('vEmail')) + kv('State', val('vState')) +
+    '</div>';
+    html += '<div class="report-section"><h3>Financial</h3>' +
+      kv('Amount', fmtCurrency(document.getElementById('fAmount').value)) +
+      kv('Contact mode', val('fContact')) + kv('Transaction ID', val('fTxnId')) +
+      kv('Bank / wallet', val('fBank')) + kv('Beneficiary', val('fBeneficiary')) +
+    '</div>';
+    html += '<div class="report-section"><h3>Investigation</h3>' +
+      kv('Status', val('iStatus')) + kv('Priority', val('iPriority')) +
+      kv('Screenshots', checked('evScreenshot')) + kv('Call logs', checked('evCallLog')) +
+      kv('Bank statement', checked('evBankStmt')) + kv('Device seized', checked('evDevice')) +
+      kv('Remarks', val('iRemarks')) +
+    '</div>';
+    html += '<div class="report-section"><h3>Prediction</h3>' +
+      kv('Category', r.category) +
+      '<div class="kv"><span class="k">Severity</span><span class="v"><span class="badge ' + r.sevClass + '">' + r.severity + '</span></span></div>' +
+      kv('Est. resolution', r.days + ' days') +
+    '</div>';
+    document.getElementById('reportBox').innerHTML = html;
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', function(){
+    if (current < stepNames.length - 1 && current !== 5) {
+      if (!validateStep(current)) return;
+      goToStep(current + 1);
+      return;
+    }
+    if (current === 5) {
+      var nextBtn = document.getElementById('nextBtn');
+      var nextLabel = document.getElementById('nextBtnLabel');
+      nextBtn.disabled = true;
+      nextLabel.innerHTML = '<span class="spinner"></span>Analyzing...';
+      runPrediction(function(result){
+        renderResult(result);
+        predictionRun = true;
+        nextBtn.disabled = false;
+        goToStep(6);
+      });
+      return;
+    }
+    if (current === stepNames.length - 1) {
+      showScreen('login'); // "Done" — demo end of flow, back to sign-in for a new session
+      return;
+    }
+  });
+
+  document.getElementById('prevBtn').addEventListener('click', function(){
+    if (current === 0) return;
+    if (current === 6 && !predictionRun) { goToStep(5); return; }
+    goToStep(current - 1);
+  });
+
+  // Auto-render report when reaching the dashboard step
+  var observer = new MutationObserver(function(){
+    if (current === 7) renderReport();
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', function(){
+    if (current === 7) renderReport();
+  });
+  document.getElementById('prevBtn').addEventListener('click', function(){
+    if (current === 7) renderReport();
+  });
+
+  document.getElementById('printBtn').addEventListener('click', function(){ window.print(); });
+
+})();
+</script>
+
+</body>
+</html>

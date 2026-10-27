@@ -37,9 +37,23 @@ def predict():
         "contact_mode": contact_mode,
         "state": state
     }
-
-    return jsonify(result)
+ jsonify(result)
 
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+    return    
+    @app.route("/")
+def home():
+    return """
+    <html>
+        <head>
+            <title>Withdrawal Intelligence Desk</title>
+        </head>
+        <body>
+            <h1>Withdrawal Intelligence Desk</h1>
+            <p>Cybercrime Prediction Backend is Running!</p>
+        </body>
+    </html>
+    """
+

@@ -405,19 +405,19 @@
           <div class="grid">
             <div class="stat">
               <b id="rLoc">—</b>
-              <span>likely withdrawal location</span>
+              <span>location prediction unavaliable</span>
             </div>
             <div class="stat">
               <b id="rTime">—</b>
-              <span>likely time window</span>
+              <span>estimated resolution time</span>
             </div>
             <div class="stat">
               <b id="rConf">—</b>
-              <span>overall confidence</span>
+              <span>confidence not calculated</span>
             </div>
             <div class="stat">
               <b id="rScore">—</b>
-              <span>risk score</span>
+              <span>risk score not calculated</span>
             </div>
           </div>
           <span class="badge" id="rBadge">—</span>
@@ -507,171 +507,104 @@
   </footer>
 
 <script>
-  // Point this at your running backend (Flask on :5000, or the Node/Express version — same API shape).
-  const API_BASE = "http://127.0.0.1:5000";
-  document.getElementById("apiBaseLabel").textContent = API_BASE;
+ const API_BASE = "";
+const $ = (id) => document.getElementById(id);
 
-  const $ = (id) => document.getElementById(id);
+async function checkStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/health`);
+    if (!res.ok) throw new Error("Health check failed");
 
-  async function checkStatus(){
-    try{
-      const res = await fetch(`${API_BASE}/`);
-      if(!res.ok) throw new Error();
-      $("statusDot").classList.remove("off");
-      $("statusText").textContent = "backend running · " + API_BASE.replace("http://","");
-    }catch(e){
-      $("statusDot").classList.add("off");
-      $("statusText").textContent = "backend unreachable — start the server";
+    $("statusDot").classList.remove("off");
+    $("statusText").textContent = "backend connected";
+  } catch (e) {
+    $("statusDot").classList.add("off");
+    $("statusText").textContent = "backend unreachable";
+  }
+}
+
+function fmtMoney(n) {
+  if (n === null || n === undefined) return "—";
+  return "₹" + Number(n).toLocaleString("en-IN");
+}
+
+async function runPrediction() {
+  $("errBox").classList.remove("show");
+  $("resultBox").classList.remove("show");
+  $("runBtn").disabled = true;
+  $("runBtn").textContent = "Running…";
+
+  const payload = {
+    amount: Number($("amount").value || 0),
+    transaction_count: Number($("txCount").value || 0),
+    previous_location: $("prevLoc").value,
+    complaint_type: $("complaintType").value,
+    sender_account: $("senderAcc").value,
+    suspicious_account: $("suspAcc").value,
+    platform: $("platform").value
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/predict`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Prediction failed");
     }
+
+    const p = data.prediction;
+
+    $("rLoc").textContent = "Not available";
+    $("rTime").textContent = p.resolution_time || "Not available";
+    $("rConf").textContent = "Not calculated";
+    $("rScore").textContent = "Not calculated";
+
+    const badge = $("rBadge");
+    badge.textContent = (p.severity || "Unknown").toUpperCase() + " SEVERITY";
+    badge.className = "badge " + (p.severity || "").toUpperCase();
+
+    $("resultBox").classList.add("show");
+
+    // Stats and complaint ledger require additional backend routes
+    // and persistent storage, which this simple backend does not have.
+    $("sTotal").textContent = "—";
+    $("sHigh").textContent = "—";
+    $("sAvg").textContent = "—";
+    $("sTotalAmt").textContent = "—";
+
+    $("riskBars").innerHTML =
+      '<div class="empty">Risk statistics are not available in this backend.</div>';
+
+    $("hotspotList").innerHTML =
+      '<div class="empty">Location predictions are not implemented.</div>';
+
+    $("ledgerBody").innerHTML =
+      '<tr><td colspan="8" class="empty">Complaint history is not stored by this backend.</td></tr>';
+
+  } catch (e) {
+    $("errBox").textContent = e.message || "Could not reach the prediction API.";
+    $("errBox").classList.add("show");
+  } finally {
+    $("runBtn").disabled = false;
+    $("runBtn").textContent = "Run prediction";
   }
+}
 
-  function fmtMoney(n){
-    if(n === null || n === undefined) return "—";
-    return "₹" + Number(n).toLocaleString("en-IN");
-  }
+$("runBtn").addEventListener("click", runPrediction);
+$("refreshBtn").addEventListener("click", checkStatus);
 
-  function fmtDate(s){
-    if(!s) return "—";
-    return s.replace(" ", " · ");
-  }
+$("filterRisk").addEventListener("change", () => {
+  $("ledgerBody").innerHTML =
+    '<tr><td colspan="8" class="empty">Risk filtering requires stored complaint records.</td></tr>';
+});
 
-  async function runPrediction(){
-    $("errBox").classList.remove("show");
-    $("resultBox").classList.remove("show");
-    $("runBtn").disabled = true;
-    $("runBtn").textContent = "Running…";
-
-    const payload = {
-      amount: Number($("amount").value || 0),
-      transaction_count: parseInt($("txCount").value || 0, 10),
-      previous_location: $("prevLoc").value,
-      complaint_type: $("complaintType").value,
-      sender_account: $("senderAcc").value,
-      suspicious_account: $("suspAcc").value,
-      platform: $("platform").value
-    };
-
-    try{
-      const res = await fetch(`${API_BASE}/api/predict`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if(!data.success) throw new Error(data.error || "Prediction failed");
-
-      const p = data.prediction;
-      $("rLoc").textContent = p.likely_withdrawal_location;
-      $("rTime").textContent = p.likely_withdrawal_time;
-      $("rConf").textContent = p.overall_confidence + "%";
-      $("rScore").textContent = p.risk_score;
-      const badge = $("rBadge");
-      badge.textContent = p.risk_level + " RISK";
-      badge.className = "badge " + p.risk_level;
-      $("resultBox").classList.add("show");
-
-      await loadStats();
-      await loadComplaints();
-    }catch(e){
-      $("errBox").textContent = "Couldn't reach the backend. Is it running at " + API_BASE + "?";
-      $("errBox").classList.add("show");
-    }finally{
-      $("runBtn").disabled = false;
-      $("runBtn").textContent = "Run prediction";
-    }
-  }
-
-  async function loadStats(){
-    try{
-      const res = await fetch(`${API_BASE}/api/stats`);
-      const s = await res.json();
-      if(!s.success) return;
-
-      $("sTotal").textContent = s.total_complaints;
-      $("sHigh").textContent = s.risk_breakdown.HIGH || 0;
-      $("sAvg").textContent = fmtMoney(s.average_amount);
-      $("sTotalAmt").textContent = fmtMoney(s.total_amount);
-
-      const total = s.total_complaints || 1;
-      const levels = ["HIGH","MEDIUM","LOW"];
-      const barsHtml = levels.map(lv => {
-        const c = s.risk_breakdown[lv] || 0;
-        const pct = Math.round((c/total)*100);
-        return `<div class="bar-row">
-          <span>${lv}</span>
-          <div class="bar-track"><div class="bar-fill ${lv}" style="width:${pct}%"></div></div>
-          <span class="n">${c}</span>
-        </div>`;
-      }).join("");
-      $("riskBars").innerHTML = s.total_complaints ? barsHtml : `<div class="empty">No complaints logged yet.</div>`;
-
-      const hotspots = s.top_predicted_locations || [];
-      $("hotspotList").innerHTML = hotspots.length
-        ? hotspots.map((h,i) => `<div class="rank-row">
-            <span class="loc"><span class="num">${String(i+1).padStart(2,"0")}</span> ${h.predicted_location}</span>
-            <span class="c">${h.c} case${h.c===1?"":"s"}</span>
-          </div>`).join("")
-        : `<div class="empty">No predictions yet.</div>`;
-    }catch(e){ /* backend offline — leave dashboard as-is */ }
-  }
-
-  const STATUSES = ["OPEN","UNDER_INVESTIGATION","ALERT_SENT","CLOSED"];
-
-  async function updateStatus(id, newStatus){
-    try{
-      await fetch(`${API_BASE}/api/complaints/${id}/status`, {
-        method: "PATCH",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({status:newStatus})
-      });
-    }catch(e){}
-  }
-
-  async function loadComplaints(){
-    const riskFilter = $("filterRisk").value;
-    let url = `${API_BASE}/api/complaints`;
-    if(riskFilter) url += `?risk_level=${riskFilter}`;
-
-    try{
-      const res = await fetch(url);
-      const data = await res.json();
-      if(!data.success || !data.complaints.length){
-        $("ledgerBody").innerHTML = `<tr><td colspan="8" class="empty">No complaints logged yet.</td></tr>`;
-        return;
-      }
-      $("ledgerBody").innerHTML = data.complaints.map(c => `
-        <tr>
-          <td class="id">#${c.id}</td>
-          <td>${c.complaint_type || "—"}</td>
-          <td>${fmtMoney(c.amount)}</td>
-          <td>${c.predicted_location || "—"}</td>
-          <td>${c.predicted_time || "—"}</td>
-          <td><span class="badge ${c.risk_level}">${c.risk_level}</span></td>
-          <td>
-            <select class="status-sel" data-id="${c.id}">
-              ${STATUSES.map(s => `<option value="${s}" ${s===c.status?"selected":""}>${s.replace("_"," ")}</option>`).join("")}
-            </select>
-          </td>
-          <td class="date">${fmtDate(c.created_at)}</td>
-        </tr>
-      `).join("");
-
-      document.querySelectorAll(".status-sel").forEach(sel => {
-        sel.addEventListener("change", (e) => updateStatus(e.target.dataset.id, e.target.value));
-      });
-    }catch(e){
-      $("ledgerBody").innerHTML = `<tr><td colspan="8" class="empty">Backend unreachable.</td></tr>`;
-    }
-  }
-
-  $("runBtn").addEventListener("click", runPrediction);
-  $("refreshBtn").addEventListener("click", () => { loadStats(); loadComplaints(); });
-  $("filterRisk").addEventListener("change", loadComplaints);
-
-  checkStatus();
-  loadStats();
-  loadComplaints();
-  setInterval(checkStatus, 15000);
+checkStatus();
+setInterval(checkStatus, 15000);
 </script>
 
 </body>

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,send_from_directory
 from flask_cors import CORS
 import os
 
@@ -7,18 +7,10 @@ CORS(app)
 
 @app.route("/")
 def home():
-    return """
-    <html>
-        <head>
-            <title>Withdrawal Intelligence Desk</title>
-        </head>
-        <body>
-            <h1>Withdrawal Intelligence Desk</h1>
-            <p>Cybercrime Prediction Backend is Running!</p>
-            <p>API Status: Active</p>
-        </body>
-    </html>
-    """
+    return send_from_directory(
+        os.path.dirname(os.path.abspath(__file__)),
+        "cybercrime-dashboard.html"
+    )
 
 @app.route("/health")
 def health():

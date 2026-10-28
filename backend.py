@@ -1,10 +1,15 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,send_from_directory
 from flask_cors import CORS
 from pathlib import Path
 import pandas as pd
 import os
 
 app = Flask(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+
+@app.route("/")
+def home():
+    return send_from_directory(BASE_DIR, "cybercrime-dashboard.html")
 CORS(app)
 
 # Load CSV from the same folder as this file

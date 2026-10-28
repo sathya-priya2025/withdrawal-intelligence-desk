@@ -9,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent
 CSV_PATH = BASE_DIR / "cybercrime.csv"
 
 df = pd.read_csv(CSV_PATH)
+df.columns = df.columns.str.strip()
 CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -59,15 +60,42 @@ def predict():
     state = data.get("state") or data.get("previous_location") or ""
 
     # Simple amount-based severity rule; not an ML prediction.
-    if amount >= 100000:
-        severity = "High"
-        resolution_time = "7-15 days"
-    elif amount >= 10000:
-        severity = "Medium"
-        resolution_time = "15-30 days"
-    else:
-        severity = "Low"
-        resolution_time = "30-45 days"
+# Keep existing severity logic
+if amount >= 100000:
+    severity = "High"
+    resolution_time = "7-15 days"
+elif amount >= 10000:
+    severity = "Medium"
+    resolution_time = "15-30 days"
+else:
+    severity = "Low"
+    resolution_time = "30-45 days"
+
+# Use dataset to find the closest matching transaction
+location = None
+withdrawal_time = None
+
+required = {
+    "amount",
+    "transaction_count",
+    "previous_location",
+    "predicted_location",
+    "predicted_time"
+}
+
+if required.issubset(df.columns) and not df.empty:
+    dataset = df.copy()
+    dataset["amount"] = pd.to_numeric(
+        dataset["amount"], errors="coerce"
+    )
+    dataset = dataset.dropna(
+        subset=["amount", "predicted_location", "predicted_time"]
+    )
+
+    if not dataset.empty:
+        closest = (dataset["amount"] - amount).abs().idxmin()
+        location = str(dataset.loc[closest, "predicted_location"])
+        withdrawal_time = str(dataset.loc[closest, "predicted_time"])
 
     return jsonify({
         "success": True,
@@ -77,11 +105,32 @@ def predict():
             "resolution_time": resolution_time,
             "contact_mode": contact_mode,
             "state": state,
-            "likely_withdrawal_location": None,
-            "likely_withdrawal_time": None,
-            "overall_confidence": None,
-            "risk_score": None,
-            "risk_level": None
+            "likely_withdrawal_location": location,
+            "likely_withdrawal_time": withdrawal_time,
+            "overall_confidence":overall_confidence,
+            "risk_score":risk_score,
+            "risk_level":risk_level
+            if not dataset.empty:
+    # Confidence here means the percentage of rows
+    # sharing the selected location and time.
+    matching = dataset[
+        (dataset["predicted_location"].astype(str) == location) &
+        (dataset["predicted_time"].astype(str) == withdrawal_time)
+    ]
+
+    overall_confidence = round(
+        len(matching) / len(dataset) * 100, 2
+    )
+
+    # Simple amount-based risk score (0-100).
+    risk_score = min(round(amount / 1000), 100)
+
+    if risk_score >= 70:
+        risk_level = "High"
+    elif risk_score >= 30:
+        risk_level = "Medium"
+    else:
+        risk_level = "Low"
         }
     })
 

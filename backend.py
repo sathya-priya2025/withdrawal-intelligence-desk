@@ -1,8 +1,14 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
+from pathlib import Path
+import pandas as pd
 
 app = Flask(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+CSV_PATH = BASE_DIR / "cybercrime.csv"
+
+df = pd.read_csv(CSV_PATH)
 CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

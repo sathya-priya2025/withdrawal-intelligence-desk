@@ -5,6 +5,10 @@ import pandas as pd
 import os
 
 app = Flask(__name__)
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"}), 200
+
 BASE_DIR = Path(__file__).resolve().parent
 
 @app.route("/")
